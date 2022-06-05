@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Do not remove this test for UTF-8: if “Ω” doesn’t appear as greek uppercase omega letter enclosed in quotation marks, you should use an editor that supports UTF-8, not this one. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <!-- Read this before publishing packages to chocolatey.org: https://github.com/chocolatey/chocolatey/wiki/CreatePackages -->
+    <id>grype</id>
+    <title>Grype</title>
+    <version>0.38.0</version>
+    <authors>Anchore Inc</authors>
+    <owners>Marcin Bojko</owners>
+    <summary>A vulnerability scanner for container images and filesystems. Easily install the binary to try it out. Works with Syft, the powerful SBOM (software bill of materials) tool for container images and filesystems.</summary>
+    <description>
+# Grype
+
+## Description
+
+A vulnerability scanner for container images and filesystems. Easily install the binary to try it out. Works with Syft, the powerful SBOM (software bill of materials) tool for container images and filesystems. [https://github.com/anchore/grype](https://github.com/anchore/grype)
+
+## Features
+
+- Install and uninstall via Chocolatey
+- Supports 64-bit version
+
+## Usage
+
+### Direct
+
+```cmd
+choco install grype -y
+```
+
+### YAML (Foreman, puppetlabs/chocolatey module)
+
+```yaml
+grype:
+  ensure: latest
+  provider: chocolatey
+```
+
+or
+
+```yaml
+grype:
+  ensure: latest
+```
+    </description>
+    <projectUrl>https://github.com/anchore/grype</projectUrl>
+    <packageSourceUrl>https://github.com/marcinbojko/grype</packageSourceUrl>
+    <docsUrl>https://github.com/anchore/grype</docsUrl>
+    <bugTrackerUrl>https://github.com/anchore/grype/issues</bugTrackerUrl>
+    <tags>grype docker image scanner cve vulnerability admin</tags>
+    <copyright>Anchore Inc</copyright>
+    <licenseUrl>https://github.com/anchore/grype/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <releaseNotes>https://github.com/anchore/grype/releases</releaseNotes>
+    <dependencies>
+    </dependencies>
+  </metadata>
+    <files>
+      <file src="tools\**" target="tools" />
+    </files>
+</package>
