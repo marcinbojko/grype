@@ -67,6 +67,21 @@ if [ -n "$version" ] && [ -n "$checksum64" ]; then
     "$sed_binary" -i "s|^\$version.*|\$version            = '$version'|g" "$powershell"
     "$sed_binary" -i "s|^\$checksum64.*|\$checksum64         = '$checksum64'|g" "$powershell"
     echo "Updated $powershell with new version and checksum."
+    # Check if the tag exists
+    if git rev-parse --quiet --verify "$version" >/dev/null; then
+        echo "Tag already exists: $version"
+    else
+    # Create the tag
+    git tag "$version"
+    git push origin "$version"
+    git add -A
+    git commit -m "Version ${version}"
+    # Push the tag to the remote repository
+    #
+    echo "Tag created and pushed: $version"
+    fi
+
+
 else
     echo -e "${RED}Error: version or checksum is/are empty.${NC}"
     printf "%-30s %s\n" "Version:" "${version}"
