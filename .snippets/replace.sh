@@ -72,10 +72,10 @@ if [ -n "$version" ] && [ -n "$checksum64" ]; then
         echo "Tag already exists: $version"
     else
     # Create the tag
-    git tag "$version"
-    git push origin "$version"
     git add -A
     git commit -m "Version ${version}"
+    git tag "$version"
+    git push origin "$version"
     # Push the tag to the remote repository
     #
     echo "Tag created and pushed: $version"
