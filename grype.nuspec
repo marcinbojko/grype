@@ -5,7 +5,7 @@
     <!-- Read this before publishing packages to chocolatey.org: https://github.com/chocolatey/chocolatey/wiki/CreatePackages -->
     <id>grype</id>
     <title>Grype</title>
-    <version>0.73.2</version>
+    <version>0.73.3</version>
     <authors>Anchore Inc</authors>
     <owners>Marcin Bojko</owners>
     <summary>A vulnerability scanner for container images and filesystems. Easily install the binary to try it out. Works with Syft, the powerful SBOM (software bill of materials) tool for container images and filesystems.</summary>
