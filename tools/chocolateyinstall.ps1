@@ -1,9 +1,9 @@
 ﻿$ErrorActionPreference = 'Stop';
 
 $packageName        = 'grype'
-$version            = '0.79.1'
+$version            = '0.79.2'
 $url64              = "https://github.com/anchore/grype/releases/download/v"+$version+"/grype_"+$version+"_windows_amd64.zip"
-$checksum64         = '4ace248b572496c7b23691674a1b8854d68e12519f9f56998955d953fe86fb7b'
+$checksum64         = '94634061a2bb8935756bcd500bdaa5f7059785d5eafaee3d3c35d8aa65e31bb9'
 $toolsDir           = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
 
 $packageArgs = @{
