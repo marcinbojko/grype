@@ -8,8 +8,8 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}Determining operating system...${NC}"
 unameOut="$(uname -s)"
 case "${unameOut}" in
-    Linux*)     machine=Linux; grep_command=grep; sed_binary=sed;;
-    Darwin*)    machine=Mac; grep_command=ggrep; sed_binary=gsed;;
+    Linux*)     machine="Linux"; grep_command="grep"; sed_binary="sed";;
+    Darwin*)    machine="Mac"; grep_command="ggrep"; sed_binary="gsed";;
     *)          machine="UNKNOWN:${unameOut}"
 esac
 printf "%-30s %s\n" "Operating system:" "${machine}"
