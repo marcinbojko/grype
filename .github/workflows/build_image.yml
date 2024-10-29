@@ -1,11 +1,12 @@
-name: build_and_push_image
+name: Build and Deploy
+
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Super-Linter"]
-    types:
-      - completed
-      - requested
+  push:
+    branches:
+      - main
+      - test
+      - master
 
 env: # Global environment variables
   PACKAGE_NAME: grype # Defining the package name as an environment variable
@@ -13,20 +14,35 @@ env: # Global environment variables
   PACKAGE_SOURCE_TEST: "https://www.myget.org/F/public-choco-dev/api/v2/package"
 
 jobs:
+  super-lint:
+    name: Lint code base
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Super-Linter
+        uses: github/super-linter@latest
+        env:
+          DEFAULT_BRANCH: main,test
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
+    needs: [super-lint]  # This ensures super-lint runs first
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [windows-2019, windows-2022]
 
     steps:
-      # Common Steps for All Branches
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Choco pack
         uses: crazy-max/ghaction-chocolatey@v3
         with:
           args: pack
+
       - name: Choco install Grype
         uses: crazy-max/ghaction-chocolatey@v3
         with:
@@ -34,19 +50,16 @@ jobs:
 
       - name: Run version check
         run: |
-           ${{ env.PACKAGE_NAME }} version
+          ${{ env.PACKAGE_NAME }} version
         shell: powershell
 
       # Branch-Specific Steps
-
-      # Only runs on main or master branches
       - name: Push to Chocolatey on main or master
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && matrix.os == 'windows-2022'
         uses: crazy-max/ghaction-chocolatey@v3
         with:
           args: push --source https://push.chocolatey.org/ -k=${{ secrets.CHOCO_API_KEY }}
 
-      # Only runs on the test branch
       - name: Push to MyGet on test branch
         if: github.ref == 'refs/heads/test'
         uses: crazy-max/ghaction-chocolatey@v3
