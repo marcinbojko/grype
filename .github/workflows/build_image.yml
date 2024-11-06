@@ -1,67 +1,35 @@
-name: Build and Deploy
-
+name: Build and Push Chocolatey Package
+# Start
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
-      - test
-      - master
+    branches: [main, master, test]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch: # Allows manual triggering
 
-env: # Global environment variables
-  PACKAGE_NAME: grype # Defining the package name as an environment variable
-  PACKAGE_SOURCE_MAIN: "https://push.chocolatey.org/"
-  PACKAGE_SOURCE_TEST: "https://www.myget.org/F/public-choco-dev/api/v2/package"
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+  actions: read
+  deployments: read
+  id-token: write
+  issues: write
+  discussions: read
+  pages: read
+  repository-projects: read
+  security-events: read
+  attestations: read # Added this
+  checks: write # Added this
+  statuses: write # Added
 
 jobs:
-  super-lint:
-    name: Lint code base
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Super-Linter
-        uses: github/super-linter@latest
-        env:
-          DEFAULT_BRANCH: main,test
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build:
-    needs: [super-lint]  # This ensures super-lint runs first
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-2019, windows-2022]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Choco pack
-        uses: crazy-max/ghaction-chocolatey@v3
-        with:
-          args: pack
-
-      - name: Choco install Grype
-        uses: crazy-max/ghaction-chocolatey@v3
-        with:
-          args: install ${{ env.PACKAGE_NAME }} -y -s .
-
-      - name: Run version check
-        run: |
-          ${{ env.PACKAGE_NAME }} version
-        shell: powershell
-
-      # Branch-Specific Steps
-      - name: Push to Chocolatey on main or master
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && matrix.os == 'windows-2022'
-        uses: crazy-max/ghaction-chocolatey@v3
-        with:
-          args: push --source https://push.chocolatey.org/ -k=${{ secrets.CHOCO_API_KEY }}
-
-      - name: Push to MyGet on test branch
-        if: github.ref == 'refs/heads/test'
-        uses: crazy-max/ghaction-chocolatey@v3
-        with:
-          args: push --source https://www.myget.org/F/public-choco-dev/api/v2/package -k=${{ secrets.MYGET_API_KEY }}
+  build-and-push:
+    uses: marcinbojko/reusable-workflows/.github/workflows/chocolatey_build_and_push.yml@main
+    with:
+      package_name: "grype" # Replace with your package name
+      package_source_main: "https://push.chocolatey.org/"
+      package_source_test: "https://www.myget.org/F/public-choco-dev/api/v2/package"
+    secrets:
+      CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+      MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
