@@ -44,12 +44,14 @@ esac
 [[ -f "$NUSPEC_FILE" ]] || error_exit "File $NUSPEC_FILE does not exist"
 [[ -f "../tools/chocolateyinstall.ps1" ]] || error_exit "File ../tools/chocolateyinstall.ps1 does not exist"
 
-# Git operations - always switch to test branch
-echo -e "${GREEN}Switching to test branch...${NC}"
-git checkout test || error_exit "Failed to checkout test branch"
+# Git operations — skip branch switch and pull when running in CI (watcher operates on main)
+if [[ "${CI:-}" != "true" ]]; then
+	echo -e "${GREEN}Switching to test branch...${NC}"
+	git checkout test || error_exit "Failed to checkout test branch"
 
-echo -e "${GREEN}Pulling latest changes...${NC}"
-git pull || error_exit "Failed to pull latest changes"
+	echo -e "${GREEN}Pulling latest changes...${NC}"
+	git pull || error_exit "Failed to pull latest changes"
+fi
 
 echo -e "${GREEN}Extracting version and id from $NUSPEC_FILE...${NC}"
 version=$($grep_command -oPm1 "(?<=<version>)[^<]+" "$NUSPEC_FILE")
@@ -113,23 +115,30 @@ echo "✓ Updated $POWERSHELL_FILE"
 
 # Check if tag already exists
 if git rev-parse --quiet --verify "$version" >/dev/null 2>&1; then
-	echo "Tag already exists: $version"
-	exit 0
+	if [[ "${FORCE_BUILD:-}" == "true" ]]; then
+		echo "Force build: deleting existing tag $version"
+		git tag -d "$version"
+	else
+		echo "Tag already exists: $version"
+		exit 0
+	fi
 fi
 
-# Validate git author before committing (prevent GitKraken profile issues)
-echo -e "${GREEN}Validating git configuration...${NC}"
-CURRENT_EMAIL=$(git config user.email)
-CURRENT_NAME=$(git config user.name)
-[[ -n "$CURRENT_EMAIL" && -n "$CURRENT_NAME" ]] || error_exit "Git author not configured! Please set user.name and user.email"
+# Validate git author before committing — skip in CI (watcher sets its own git identity)
+if [[ "${CI:-}" != "true" ]]; then
+	echo -e "${GREEN}Validating git configuration...${NC}"
+	CURRENT_EMAIL=$(git config user.email)
+	CURRENT_NAME=$(git config user.name)
+	[[ -n "$CURRENT_EMAIL" && -n "$CURRENT_NAME" ]] || error_exit "Git author not configured! Please set user.name and user.email"
 
-# Hash-based validation using configured expected hash
-CURRENT_HASH=$(echo -n "$CURRENT_EMAIL" | sha256sum | cut -d' ' -f1)
-if [[ "$CURRENT_HASH" != "$EXPECTED_EMAIL_HASH" ]]; then
-	error_exit "Incorrect git author configuration!\nCurrent author: $CURRENT_NAME <$CURRENT_EMAIL>\nThis may be caused by GitKraken profile switching."
+	# Hash-based validation using configured expected hash
+	CURRENT_HASH=$(echo -n "$CURRENT_EMAIL" | sha256sum | cut -d' ' -f1)
+	if [[ "$CURRENT_HASH" != "$EXPECTED_EMAIL_HASH" ]]; then
+		error_exit "Incorrect git author configuration!\nCurrent author: $CURRENT_NAME <$CURRENT_EMAIL>\nThis may be caused by GitKraken profile switching."
+	fi
+
+	echo -e "${GREEN}✓ Git author validated: $CURRENT_NAME <$CURRENT_EMAIL>${NC}"
 fi
-
-echo -e "${GREEN}✓ Git author validated: $CURRENT_NAME <$CURRENT_EMAIL>${NC}"
 
 # Create the commit and tag
 echo -e "${GREEN}Creating commit and tag...${NC}"

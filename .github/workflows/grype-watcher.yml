@@ -1,0 +1,101 @@
+---
+# Watches for new grype releases (non-prerelease).
+# On a new version: bumps grype.nuspec version, then delegates to .snippets/replace.sh
+# which verifies assets, updates chocolateyinstall.ps1, commits, and tags.
+# Pushes directly to main — the push triggers build_image.yml to publish to Chocolatey.
+#
+# REQUIRED SECRET: GH_PAT — Personal Access Token with 'repo' scope.
+# GITHUB_TOKEN cannot trigger downstream workflows on push.
+
+name: Grype Release Watcher
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch: # checkov:skip=CKV_GHA_7:force_build is an intentional manual override
+    inputs:
+      force_build:
+        description: "Force build even if this grype version is already tagged"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: grype-release-watcher
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-update:
+    name: Check for new grype release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Detect new upstream release
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_BUILD: ${{ inputs.force_build }}
+        run: |
+          RELEASE=$(curl -sf \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/anchore/grype/releases/latest")
+
+          if [ "$(echo "$RELEASE" | jq -r '.prerelease')" = "true" ]; then
+            echo "Latest release is a pre-release, skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          VERSION=$(echo "$RELEASE" | jq -r '.tag_name | ltrimstr("v")')
+          if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
+            echo "Failed to parse version from release response."
+            exit 1
+          fi
+          echo "Latest grype version: ${VERSION}"
+
+          if git rev-parse --quiet --verify "refs/tags/${VERSION}" >/dev/null 2>&1 && [ "${FORCE_BUILD}" != "true" ]; then
+            echo "Tag ${VERSION} already exists, nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version in grype.nuspec
+        if: steps.detect.outputs.skip != 'true'
+        run: |
+          sed -i "s|<version>[^<]*</version>|<version>${{ steps.detect.outputs.version }}</version>|" grype.nuspec
+
+      - name: Run replace.sh — verify assets, update ps1, commit and tag
+        if: steps.detect.outputs.skip != 'true'
+        env:
+          FORCE_BUILD: ${{ inputs.force_build }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cd .snippets
+          bash replace.sh
+
+      - name: Push commit and tag
+        if: steps.detect.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.detect.outputs.version }}"
+          FORCE_BUILD="${{ inputs.force_build }}"
+          if [ "${FORCE_BUILD}" = "true" ]; then
+            git push origin HEAD:main "+refs/tags/${VERSION}:refs/tags/${VERSION}"
+          else
+            git push origin HEAD:main "refs/tags/${VERSION}"
+          fi
+          echo "Pushed commit and tag ${VERSION} to main — build_image.yml will publish to Chocolatey."
