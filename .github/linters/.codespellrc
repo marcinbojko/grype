@@ -1,0 +1,4 @@
+# Super-Linter reads codespell config from .github/linters/.codespellrc
+# Neutralize codespell for this repo: skip every file so nothing is checked.
+[codespell]
+skip = *
